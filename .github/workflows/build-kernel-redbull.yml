@@ -123,9 +123,7 @@ jobs:
           fi
           
           echo "Adding KernelSU..."
-          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
-          #cd ./KernelSU/kernel
-          #sed -i 's/ccflags-y += -DKSU_VERSION=16/ccflags-y += -DKSU_VERSION=12321/' ./Makefile
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
 
       - name: Apply SUSFS Patches
         run: |
@@ -232,24 +230,3 @@ jobs:
         with:
           name: dtbo.img
           path: "redbull/out/android-msm-pixel-4.19/dist/dtbo.img"
-          
-
-      - name: dtbo_redfin.img
-        uses: actions/upload-artifact@v4
-        with:
-          name: dtbo_redfin.img
-          path: "redbull/out/android-msm-pixel-4.19/dist/dtbo_redfin.img"
-
-
-      - name: aosp_arm64.img
-        uses: actions/upload-artifact@v4
-        with:
-          name: aosp_arm64.img
-          path: "redbull/prebuilts/boot-artifacts/ramdisks/ramdisk-aosp_arm64.img"
-          
-
-      - name: barbet.img
-        uses: actions/upload-artifact@v4
-        with:
-          name: barbet.img
-          path: "redbull/prebuilts/boot-artifacts/ramdisks/vendor_ramdisk-barbet.img"
