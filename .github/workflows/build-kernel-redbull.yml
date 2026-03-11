@@ -153,28 +153,29 @@ jobs:
           
           echo "Adding KernelSU..."
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
+      
+      - name: Apply SUSFS Patches
+        if: ${{ github.event.inputs.susfs_enable == 'true' }}
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/private/msm-google/"
+          
+          echo "Applying SUSFS patches..."
+          
+          # Copy SUSFS patches
+          cp ../../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU/
+          cp ../../../susfs4ksu/kernel_patches/50_add_susfs_in_kernel-4.19.patch ./
+          cp ../../../susfs4ksu/kernel_patches/fs/* ./fs/
+          cp ../../../susfs4ksu/kernel_patches/include/linux/* ./include/linux/
 
-      # - name: Apply SUSFS Patches
-      #   run: |
-      #     echo "Changing to configuration directory: $CONFIG..."
-      #     cd "$CONFIG/private/msm-google/"
+          cd ./KernelSU
           
-      #     echo "Applying SUSFS patches..."
+          # Apply SUSFS patch for KernelSU
+          patch -p1 --fuzz=3 < 10_enable_susfs_for_ksu.patch || true
           
-      #     # Copy SUSFS patches
-      #     cp ../../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU/
-      #     cp ../../../susfs4ksu/kernel_patches/50_add_susfs_in_kernel-4.19.patch ./
-      #     cp ../../../susfs4ksu/kernel_patches/fs/* ./fs/
-      #     cp ../../../susfs4ksu/kernel_patches/include/linux/* ./include/linux/
-
-      #     cd ./KernelSU
-          
-      #     # Apply SUSFS patch for KernelSU
-      #     patch -p1 --fuzz=3 < 10_enable_susfs_for_ksu.patch || true
-          
-      #     # Change to common directory and apply SUSFS patch
-      #     cd ..
-      #     patch -p1 --fuzz=3 < 50_add_susfs_in_kernel-4.19.patch || true
+          # Change to common directory and apply SUSFS patch
+          cd ..
+          patch -p1 --fuzz=3 < 50_add_susfs_in_kernel-4.19.patch || true
 
       - name: Apply KSU Hooks
         run: |
@@ -197,23 +198,29 @@ jobs:
           # Add additional tmpfs config setting
           echo "CONFIG_TMPFS_XATTR=y" >> ./arch/arm64/configs/redbull-gki_defconfig
 
+      - name: Apply SUSFS Configuration Settings
+        if: ${{ github.event.inputs.susfs_enable == 'true' }}
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/private/msm-google/"
+          echo "Adding SUSFS configuration settings to redbull-gki_defconfig..."
           # Add SUSFS configuration settings
-          # echo "CONFIG_KSU_SUSFS=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_SUS_OVERLAYFS=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          # echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_OVERLAYFS=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> ./arch/arm64/configs/redbull-gki_defconfig
           
       - name: Run sed and perl Commands
         run: |
