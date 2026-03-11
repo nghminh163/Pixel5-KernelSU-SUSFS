@@ -3,6 +3,14 @@ name: Kernel build for redbull device
 on:
   workflow_dispatch:
     inputs:
+      device:
+        type: choice
+        description: 'Select device'
+        required: true
+        default: 'redfin'
+        options:
+          - redfin
+
       android_version:
         type: choice
         description: 'Select Android version'
@@ -57,7 +65,7 @@ jobs:
       - name: Set environment
         run: |
           # Set CONFIG dynamically based on matrix values
-          CONFIG="redfin"
+          CONFIG=${{ github.event.inputs.device }}
           ANDROID_BRANCH=${{ github.event.inputs.android_version }}
           
           # Set CONFIG as an environment variable for future steps
