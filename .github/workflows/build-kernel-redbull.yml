@@ -36,8 +36,7 @@ on:
         options:
           - 'kernelSU'
           - 'kernelSU-next'
-          - 'SukiSU'
-
+          # - 'SukiSU'
 
 jobs:
   build-kernel-4-19-redbull:
@@ -179,15 +178,15 @@ jobs:
           echo "Adding KernelSU..."
           curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
 
-      - name: Add SukiSU Ultra
-        if: ${{ github.event.inputs.kernel_root == 'SukiSU' }}
-        run: |
-          echo "Changing to configuration directory: $CONFIG..."
-          cd "$CONFIG/private/msm-google/"
+      # - name: Add SukiSU Ultra
+      #   if: ${{ github.event.inputs.kernel_root == 'SukiSU' }}
+      #   run: |
+      #     echo "Changing to configuration directory: $CONFIG..."
+      #     cd "$CONFIG/private/msm-google/"
           
-          echo "Adding SukiSU Ultra..."
+      #     echo "Adding SukiSU Ultra..."
           
-          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s builtin
+      #     curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s builtin
 
 
       - name: Apply SUSFS Patches
@@ -270,20 +269,20 @@ jobs:
           echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> ./arch/arm64/configs/redbull-gki_defconfig
           echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> ./arch/arm64/configs/redbull-gki_defconfig
           
-      - name: Add Configuration Settings KSU
-        if: ${{ github.event.inputs.kernel_root == 'SukiSU' }}
-        run: |
-          echo "Changing to configuration directory: $CONFIG..."
-          cd "$CONFIG/private/msm-google/"
+      # - name: Add Configuration Settings KSU
+      #   if: ${{ github.event.inputs.kernel_root == 'SukiSU' }}
+      #   run: |
+      #     echo "Changing to configuration directory: $CONFIG..."
+      #     cd "$CONFIG/private/msm-google/"
           
-          echo "Adding configuration settings to redbull-gki_defconfig..."
+      #     echo "Adding configuration settings to redbull-gki_defconfig..."
           
-          # Enable SukiSU configuration
-          echo "CONFIG_KSU=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          echo "CONFIG_KPM=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          echo "CONFIG_KALLSYMS=y" >> ./arch/arm64/configs/redbull-gki_defconfig
-          echo "CONFIG_KALLSYMS_ALL=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+      #     # Enable SukiSU configuration
+      #     echo "CONFIG_KSU=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+      #     echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+      #     echo "CONFIG_KPM=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+      #     echo "CONFIG_KALLSYMS=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+      #     echo "CONFIG_KALLSYMS_ALL=y" >> ./arch/arm64/configs/redbull-gki_defconfig
 
       - name: Run sed and perl Commands
         run: |
