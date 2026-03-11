@@ -61,6 +61,9 @@ jobs:
           echo "Android version: ${{ github.event.inputs.android_version }}"
           echo "SUSFS enable: ${{ github.event.inputs.susfs_enable }}"
           echo "Kernel root: ${{ github.event.inputs.kernel_root }}"
+          if [ "${{ github.event.inputs.susfs_enable }}" = "false" ] && [ "${{ github.event.inputs.kernel_root }}" = "SukiSU" ]; then
+            echo "Error: SUSFS cannot be disabled when using SukiSU kernel root. Please enable SUSFS"
+            exit 1
 
       - name: Checkout code
         uses: actions/checkout@v3
@@ -102,7 +105,7 @@ jobs:
           sudo apt install build-essential flex bison libssl-dev libelf-dev libncurses5-dev gcc-aarch64-linux-gnu make
 
       - name: Clone SUSFS
-        if: ${{ github.event.inputs.susfs_enable == 'true' }}
+        if: ${{ github.event.inputs.susfs_enable == 'true' && (github.event.inputs.kernel_root == 'kernelSU-Next' || github.event.inputs.kernel_root == 'kernelSU') }}
         run: |
           echo "Cloning SUSFS..."
           SUSFS_BRANCH="kernel-4.19"
