@@ -165,10 +165,11 @@ jobs:
       - name: Apply KSU Hooks
         run: |
           echo "Changing to configuration directory: $CONFIG..."
-          ls
-          # cd "$CONFIG/private/msm-google/"
+          # Remove line
+          mkdir -p "$CONFIG/private/msm-google/KernelSU"
+          cd "$CONFIG/private/msm-google/"
           # Apply additional patch
-          # cat ../../kernel_patches/ksu_hooks_4.19.patch
+          cat ../../kernel_patches/ksu_hooks_4.19.patch
           # cp ../../kernel_patches/ksu_hooks_4.19.patch ./
           # patch -p1 --fuzz=3 < ./ksu_hooks_4.19.patch
 
