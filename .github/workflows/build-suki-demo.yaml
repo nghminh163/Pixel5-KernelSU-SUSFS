@@ -1,0 +1,219 @@
+name: Build Pixel5 Android14 SukiSU-Ultra SUSFS
+
+permissions:
+  contents: read  # 不需要写入 release 或打 tag
+  actions: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_redbull:
+        description: 'Build Pixel5 Android14 SukiSU-Ultra SUSFS'
+        required: true
+        type: boolean
+        default: true
+        
+jobs:
+  build-kernel-4-19-kernelsu-susfs:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 8192    # 8GB for root memory reservation
+          temp-reserve-mb: 2048     # 2GB for temporary memory reservation
+          swap-size-mb: 8192       # 8GB for swap size
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+
+      - name: Get build space
+        run: |
+          free -h
+          df -h
+
+      - name: Set CONFIG Environment Variable
+        run: |
+          # Set CONFIG dynamically based on matrix values
+          CONFIG="redbull"
+          
+          # Set CONFIG as an environment variable for future steps
+          echo "CONFIG=$CONFIG" >> $GITHUB_ENV
+          
+          echo "CONFIG set to: $CONFIG"
+
+      - name: Install Repo
+        run: |
+          # Install dependencies
+          mkdir -p ./git-repo
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ./git-repo/repo
+          chmod a+rx ./git-repo/repo
+          echo "REPO=$GITHUB_WORKSPACE/./git-repo/repo" >> $GITHUB_ENV
+
+      - name: Install Others
+        run: |
+          # Install dependencies
+          sudo apt update
+          sudo apt install build-essential flex bison libssl-dev libelf-dev libncurses5-dev gcc-aarch64-linux-gnu make
+          
+          sudo timedatectl set-ntp true
+          sudo timedatectl status
+
+      - name: Clone AnyKernel3 and Other Dependencies
+        run: |
+          echo "Cloning AnyKernel3 and other dependencies..."
+    
+          # Define the branch names using the matrix values
+          ANYKERNEL_BRANCH="android-4.19"
+
+          # Debug print the branches
+          echo "Using branch for AnyKernel3: $ANYKERNEL_BRANCH"
+
+          # Clone repositories using the branch names
+          git clone https://github.com/WildPlusKernel/AnyKernel3.git -b "$ANYKERNEL_BRANCH"
+
+      - name: 🔍 Locate ramdisk
+        id: locate_ramdisk
+        run: |
+          echo "📁 当前工作目录：$(pwd)"
+          echo "📦 搜索 ramdisk ..."
+    
+          FOUND=$(find . -type f -name "ramdisk" | head -n 1)
+    
+          if [ -z "$FOUND" ]; then
+            echo "❌ 未找到 ramdisk 文件，终止构建。重要文件。。不集成编译进去会开不了机。。哈哈"
+            exit 1
+          else
+            echo "✅ 找到了文件：$FOUND"
+            echo "FOUND_PATH=$FOUND" >> $GITHUB_ENV
+          fi
+
+      - name: Initialize and Sync Kernel Source
+        run: |
+
+          echo "创建配置目录：$CONFIG"
+          mkdir -p "$CONFIG"
+
+          echo "复制 ramdisk：$FOUND_PATH 到 $CONFIG/"
+          cp -fv "$FOUND_PATH" "$CONFIG/"
+          cp -fv vendor_ramdisk "$CONFIG/"
+          
+          cd "$CONFIG"
+          
+          # Initialize and sync kernel source
+          echo "Initializing and syncing kernel source..."
+          $REPO init -u https://android.googlesource.com/kernel/manifest -b android-msm-redbull-4.19-android14-qpr3 --repo-rev=v2.54
+
+          # Sync repo and apply patches
+          $REPO --version
+          $REPO --trace sync -c -j$(nproc --all) --no-tags --fail-fast
+
+          cd private/msm-google/
+          
+          git checkout 7b0944645172
+
+          cd ..
+          cd ..
+          
+          cp -fv ramdisk prebuilts/boot-artifacts/ramdisks/ramdisk-aosp_arm64.img
+          cp -fv vendor_ramdisk prebuilts/boot-artifacts/ramdisks/vendor_ramdisk-barbet.img
+          cp -fv vendor_ramdisk prebuilts/boot-artifacts/ramdisks/vendor_ramdisk-bramble.img
+
+      - name: Add KernelSU
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/private/msm-google/"
+          
+          echo "Adding SukiSU Ultra..."
+          
+          curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s nongki
+          
+
+      - name: Add SUSFS Configuration Settings
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/private/msm-google/"
+          
+          echo "Adding configuration settings to redbull-gki_defconfig..."
+          
+          # Add SUSFS configuration settings
+          echo "CONFIG_KSU=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KPM=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KALLSYMS=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+          echo "CONFIG_KALLSYMS_ALL=y" >> ./arch/arm64/configs/redbull-gki_defconfig
+
+      - name: Run sed and perl Commands
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/private/msm-google/"
+
+          echo "Running sed commands..."
+          
+          # Run sed commands for modifications
+          sed -i 's/check_defconfig//' ./build.config.common
+          sed -i 's/check_defconfig//' ./build.config.redbull
+          sed -i 's/check_defconfig && //' ./build.config.redbull.no-cfi
+
+          sed -i '$s|echo "\$res"|echo "\-g7b0944645172-ab10812814"|' ./scripts/setlocalversion
+
+      - name: Build the Kernel
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG"
+          
+          echo "Building the kernel..."
+          BUILD_AOSP_KERNEL=1 ./build_redbull-gki.sh
+
+      - name: Create Bootimgs Folder and Copy Images
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG"
+
+          echo "Copying Image"
+          cp -r ./out/android-msm-pixel-4.19/dist/Image.lz4 ../AnyKernel3/Image
+          
+          
+      - name: Create ZIP Files for Different Formats
+        run: |
+          echo "Creating zip files for all formats..."
+          cd ./AnyKernel3
+          
+          ZIP_NAME="PIXEL-5-A14-KernelSU-SUSFS.zip"
+          echo "Creating zip file $ZIP_NAME..."
+          zip -r "../$ZIP_NAME" ./*
+
+          
+      - name: AnyKernel3.zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: AnyKernel3
+          path: |
+            *.zip
+            
+
+      - name: boot.img
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot.img
+          path: "redbull/out/android-msm-pixel-4.19/dist/boot.img"
+          
+          
+      - name: vendor_boot.img
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor_boot.img
+          path: "redbull/out/android-msm-pixel-4.19/dist/vendor_boot.img"
+          
+
+      - name: dtbo.img
+        uses: actions/upload-artifact@v4
+        with:
+          name: dtbo.img
+          path: "redbull/out/android-msm-pixel-4.19/dist/dtbo.img"
