@@ -35,6 +35,7 @@ on:
         default: 'kernelSU'
         options:
           - 'kernelSU'
+          - 'kernelSU-next'
 
 
 jobs:
@@ -82,6 +83,8 @@ jobs:
           # Set RAMDISK_PATH environment variable for future steps
           echo "RAMDISK_PATH=$GITHUB_WORKSPACE/ramdisk/$CONFIG/$ANDROID_BRANCH" >> $GITHUB_ENV
           echo "ANDROID_BRANCH=$ANDROID_BRANCH" >> $GITHUB_ENV
+          KERNEL_ROOT=${{ github.event.inputs.kernel_root }}
+          echo "KERNEL_ROOT=$KERNEL_ROOT" >> $GITHUB_ENV
 
       - name: Install Repo
         run: |
@@ -153,13 +156,24 @@ jobs:
           cp -fv vendor_ramdisk prebuilts/boot-artifacts/ramdisks/vendor_ramdisk-bramble.img
 
       - name: Add KernelSU
+        if: ${{ github.event.inputs.kernel_root == 'kernelSU' }}
         run: |
           echo "Changing to configuration directory: $CONFIG..."
           cd "$CONFIG/private/msm-google/"
           
           echo "Adding KernelSU..."
           curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
-      
+
+      - name: Add KernelSU-Next
+        if: ${{ github.event.inputs.kernel_root == 'kernelSU-Next' }}
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG/private/msm-google/"
+          
+          echo "Adding KernelSU..."
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+
+
       - name: Apply SUSFS Patches
         if: ${{ github.event.inputs.susfs_enable == 'true' }}
         run: |
@@ -169,7 +183,12 @@ jobs:
           echo "Applying SUSFS patches..."
           
           # Copy SUSFS patches
-          cp ../../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU/
+          # Check env $KERNEL_ROOT
+          if [ "$KERNEL_ROOT" == "kernelSU" ]; then
+            cp ../../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU/
+          elif [ "$KERNEL_ROOT" == "kernelSU-next" ]; then
+            cp ../../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./KernelSU-Next/
+          fi
           cp ../../../susfs4ksu/kernel_patches/50_add_susfs_in_kernel-4.19.patch ./
           cp ../../../susfs4ksu/kernel_patches/fs/* ./fs/
           cp ../../../susfs4ksu/kernel_patches/include/linux/* ./include/linux/
